@@ -1,9 +1,10 @@
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import render
 import requests, json
 from crypto_notify.bot_constants import *
 from twilio.rest import Client
-
+from django.contrib.auth.models import User
+from crypto_notify.models import Coin_User,Coin
 # Create your views here.
 def home(request):
     return HttpResponse("Crypto ")
@@ -21,8 +22,8 @@ def api_call(coin_values):
     else:
         return []
 
-def display_coin_price(request):
-    list_coins = api_call('BTC,ETH')
+def display_coin_price(request,coins="BTC,ETH"):
+    list_coins = api_call(coins)
     required_coin_prices = []
     for i in list_coins:
         temp = {}
@@ -39,20 +40,45 @@ def get_current_usd_value(from_currency, to_currency):
     result = req_ob.json()
     return result["Realtime Currency Exchange Rate"]['5. Exchange Rate']
 
-def message_sender(request):
-    list_coins = api_call('BTC,ETH')
-    usd_value_in_inr = get_current_usd_value('USD','INR')
-    message_body = " \nUPDATE"
-    for i in list_coins:
-        coin_info = "\nID : "+str(i['asset_id'])+"\nNAME : "+i['name']+" \nPRICE : "+str(int(i['price_usd']*float(usd_value_in_inr)))+"USD \n"
-        message_body+=coin_info 
-
+def message_sender(message,to_phone_number='+917588425170'):
     client = Client(TWILIO_ID, TWILIO_KEY)
-    
     message_twilio = client.messages.create(
-        body=message_body,
+        body=message,
         from_ = TWILIO_NUMBER,
-        to = '+917588425170'
+        to = to_phone_number
     )
     print("message sent")
-    return HttpResponse("sent")
+    return HttpResponse("MESSAGE SENT")
+
+def auto_updater(request):
+    if(request.method == 'GET'):
+        list_users = User.objects.all()
+        usd_value_in_inr = get_current_usd_value('USD','INR')
+        for user_ in list_users:
+            message =" \nUPDATE"
+            coins_assosiated = Coin_User.objects.filter(user=user_)
+            coin_ids = []
+            coin_limit_price = {}
+            for coin in coins_assosiated:
+                coin_ids.append(coin.coin.coin_id)
+                coin_limit_price[coin.coin.coin_id] = coin.price_limit
+            coin_str = ",".join(coin_ids)
+            coin_values_list = api_call(coin_str)
+            for single_coin in coin_values_list:
+                coin_limit = coin_limit_price[single_coin['asset_id']]
+                current_coin_price_inr = float(usd_value_in_inr) * float(single_coin['price_usd'])
+                difference = current_coin_price_inr - coin_limit
+                if(difference < coin_limit/100.0):
+                    message+=("\nID : "+str(single_coin['asset_id'])+"\nNAME : "+single_coin['name']+" \nPRICE : "+str(int(current_coin_price_inr))+" INR \n")
+            if(message != " \nUPDATE"):
+                message_sender(message)
+        return JsonResponse("UPDATED")
+    else:
+        return JsonResponse("ONLY GET REQUEST IS ALLOWED")
+
+            
+
+
+
+
+

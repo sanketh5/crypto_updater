@@ -5,6 +5,6 @@ from .views import *
 urlpatterns = [
     path('', views.home),
     path('price',views.display_coin_price),
-    path('send_message',views.message_sender),
+    path('send_message',views.auto_updater),
     
 ]

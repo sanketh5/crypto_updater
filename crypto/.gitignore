@@ -1,2 +1,6 @@
 */bot_constants.py
 *.ipynb
+*db.sqlite3
+*migrations/
+*/log.log
+*/__pycache__/
