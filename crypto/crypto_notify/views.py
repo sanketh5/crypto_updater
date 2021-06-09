@@ -72,9 +72,9 @@ def auto_updater(request):
                     message+=("\nID : "+str(single_coin['asset_id'])+"\nNAME : "+single_coin['name']+" \nPRICE : "+str(int(current_coin_price_inr))+" INR \n")
             if(message != " \nUPDATE"):
                 message_sender(message)
-        return JsonResponse("UPDATED")
+        return HttpResponse("UPDATED")
     else:
-        return JsonResponse("ONLY GET REQUEST IS ALLOWED")
+        return HttpResponse("ONLY GET REQUEST IS ALLOWED")
 
             
 
