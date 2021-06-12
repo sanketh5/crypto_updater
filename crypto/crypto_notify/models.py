@@ -1,5 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
 # Create your models here.
 class Coin(models.Model):
     name =  models.CharField(max_length=600)
@@ -8,7 +9,7 @@ class Coin(models.Model):
         return self.name
 
 class Coin_User(models.Model):
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
+    user = models.ForeignKey(get_user_model(),on_delete=models.CASCADE)
     coin = models.ForeignKey(Coin,on_delete=models.CASCADE)
     price_limit = models.IntegerField(default=100)
     def __str__(self):

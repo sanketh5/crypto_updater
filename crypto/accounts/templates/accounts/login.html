@@ -1,0 +1,10 @@
+<form method="POST">
+    {% if error %}
+    <p style="color:red">{{ error }}</p>
+    {% endif %}
+
+    {% csrf_token %}
+
+    {{ form.as_p }}
+    <input type="submit" value="Submit">
+</form>
