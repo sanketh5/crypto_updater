@@ -11,5 +11,10 @@ class Coin_User(models.Model):
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     coin = models.ForeignKey(Coin,on_delete=models.CASCADE)
     price_limit = models.IntegerField(default=100)
+    notify_type_options=(
+        ("Down","Dowm"),
+        ("Up","Up"), 
+    )
+    notify_type = models.CharField(max_length=100,choices=notify_type_options,default="Dowm")
     def __str__(self):
         return " | ".join([self.user.username,self.coin.name])

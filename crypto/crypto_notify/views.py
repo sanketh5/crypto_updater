@@ -9,16 +9,19 @@ from crypto_notify.models import Coin_User,Coin
 def home(request):
     return HttpResponse("Crypto ")
 
-def api_call(coin_values):
+def api_call(coin_values, crypto_api_key = CRYPTO_API_KEY):
     ''' the coin_vaues should be a string of asset_ids seperated by , eg. BTC,ETH,USD '''
     base_url = CRYPTO_API_URL
-    headers = {'X-CoinAPI-Key' : CRYPTO_API_KEY}
+    headers = {'X-CoinAPI-Key' : crypto_api_key}
     #add filter to url as get params
     url = base_url+"?filter_asset_id="+coin_values
     response = requests.get(url, headers=headers)
+    print(f"the response form the server is  {response}")
     if(response):
         required_coins = response.json()
         return required_coins
+    elif(response.status_code == 429):
+        return api_call(coin_values, CRYPTO_API_KEY_2)
     else:
         return []
 
@@ -40,14 +43,14 @@ def get_current_usd_value(from_currency, to_currency):
     result = req_ob.json()
     return result["Realtime Currency Exchange Rate"]['5. Exchange Rate']
 
-def message_sender(message,to_phone_number='+917588425170'):
+def message_sender(message,to_phone_number='+918788513442'):
     client = Client(TWILIO_ID, TWILIO_KEY)
     message_twilio = client.messages.create(
         body=message,
         from_ = TWILIO_NUMBER,
         to = to_phone_number
     )
-    print("message sent")
+    print(f"message sent to user \n\n {message}")
     return HttpResponse("MESSAGE SENT")
 
 def auto_updater(request):
@@ -60,16 +63,24 @@ def auto_updater(request):
             coin_ids = []
             coin_limit_price = {}
             for coin in coins_assosiated:
-                coin_ids.append(coin.coin.coin_id)
-                coin_limit_price[coin.coin.coin_id] = coin.price_limit
+                if(coin.coin.coin_id not in coin_ids):
+                    coin_ids.append(coin.coin.coin_id)
+                coin_limit_price[coin.coin.coin_id +"_"+ coin.notify_type] = coin.price_limit
             coin_str = ",".join(coin_ids)
             coin_values_list = api_call(coin_str)
             for single_coin in coin_values_list:
-                coin_limit = coin_limit_price[single_coin['asset_id']]
+                coin_id = single_coin['asset_id']
                 current_coin_price_inr = float(usd_value_in_inr) * float(single_coin['price_usd'])
-                difference = current_coin_price_inr - coin_limit
-                if(difference < coin_limit/100.0):
-                    message+=("\nID : "+str(single_coin['asset_id'])+"\nNAME : "+single_coin['name']+" \nPRICE : "+str(int(current_coin_price_inr))+" INR \n")
+                if(coin_id + "_Down" in coin_limit_price.keys()):
+                    coin_limit = coin_limit_price[coin_id+"_Down"]
+                    difference = current_coin_price_inr - coin_limit
+                    if(difference < coin_limit/100.0):
+                        message+=("\nID : "+str(coin_id)+"\nNAME : "+single_coin['name']+" \nPRICE : "+str(int(current_coin_price_inr))+" INR \nTYPE : DOWN\n")
+                if(coin_id + "_Up" in coin_limit_price.keys()):
+                    coin_limit = coin_limit_price[coin_id+ "_Up"]
+                    difference = coin_limit - current_coin_price_inr
+                    if(difference < coin_limit/100.0):
+                        message+=("\nID : "+str(coin_id)+"\nNAME : "+single_coin['name']+" \nPRICE : "+str(int(current_coin_price_inr))+" INR \nTYPE : UP\n")   
             if(message != " \nUPDATE"):
                 message_sender(message)
         return HttpResponse("UPDATED")
